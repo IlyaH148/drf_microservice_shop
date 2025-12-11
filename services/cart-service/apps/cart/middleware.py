@@ -13,15 +13,15 @@ class JWTAuthenticationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Пропускаем health check и admin
+        # Проверки для health и admin
         if request.path in ['/health/', '/admin/'] or request.path.startswith('/admin/'):
             return self.get_response(request)
 
-        # Пропускаем OPTIONS запросы (preflight)
+        # OPTIONS запросы
         if request.method == 'OPTIONS':
             return self.get_response(request)
 
-        # Извлекаем токен
+        # Аутентификация JWT
         auth_header = request.headers.get('Authorization')
 
         if auth_header and auth_header.startswith('Bearer '):
@@ -44,11 +44,14 @@ class JWTAuthenticationMiddleware:
                     'message': 'The provided authentication token is invalid'
                 }, status=401)
         else:
-            logger.warning(f"No auth header found for {request.path}")
+            # Тут должно выбираться исключение, если путь не требует авторизации
+            # Но при этом для favicon, static, media — не должно быть ошибок
+            print(f"Authorization header missing or invalid for {request.path}")  # Для дебага
             return JsonResponse({
                 'error': 'Authentication required',
                 'message': 'Authorization header with Bearer token is required'
             }, status=401)
+
 
         # Не должно сюда дойти, но на всякий случай
         response = self.get_response(request)
